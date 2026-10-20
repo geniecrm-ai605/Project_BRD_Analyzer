@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "app.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{.venv/**,data/**,test_brds/**,scripts/**,.git/**,models/bge_cache/**,models/*_metrics.json,**/tests/**}"
+    }
+  }
+}

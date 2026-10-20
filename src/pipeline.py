@@ -3,7 +3,6 @@ import json
 import re
 from sklearn.base import clone
 import numpy as np
-import pandas as pd
 import joblib
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
@@ -30,6 +29,7 @@ _LABELED = re.compile(r"^Objective:.*Scope:.*Integrations:", re.S)
 
 
 def load_jsonl(path, only_labeled=True):
+    import pandas as pd
     """Read a dataset file. Rows whose text is not in the 'Objective/Scope/Integrations' format are skipped:
     their durations cannot be predicted from their text (audit R2 ~ 0), so they only add noise."""
     rows, skipped = [], 0
@@ -56,6 +56,7 @@ def load_jsonl(path, only_labeled=True):
 
 
 def load_feedback(requests_path, actuals_path):
+    import pandas as pd
     """Join logged requests with the actual outcomes people reported -> extra training rows."""
     try:
         reqs = {}
