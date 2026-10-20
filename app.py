@@ -20,8 +20,12 @@ from src.pipeline import ROLES, StaffingModel
 
 MODEL_PATH = os.getenv("MODEL_PATH", "models/staffing_model.joblib")
 API_KEY = os.getenv("STAFFING_API_KEY", "")  # set this in production
-FB_DIR = os.getenv("FEEDBACK_DIR", "data/feedback")
-os.makedirs(FB_DIR, exist_ok=True)
+FB_DIR = os.getenv("FEEDBACK_DIR", "/tmp/feedback" if os.getenv("VERCEL") else "data/feedback")
+try:
+    os.makedirs(FB_DIR, exist_ok=True)
+except OSError:
+    FB_DIR = "/tmp/feedback"
+    os.makedirs(FB_DIR, exist_ok=True)
 
 app = FastAPI(title="CRM GENIE Staffing Recommendations")
 model = StaffingModel.load(MODEL_PATH)
