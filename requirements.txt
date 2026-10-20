@@ -1,0 +1,13 @@
+# core
+numpy
+pandas
+scikit-learn
+joblib
+python-docx
+# API
+fastapi
+uvicorn[standard]
+python-multipart
+httpx          # only for tests
+# embeddings (CPU torch first: pip install torch --index-url https://download.pytorch.org/whl/cpu)
+sentence-transformers
