@@ -18,7 +18,17 @@ from pydantic import BaseModel
 from src.brd_reader import condense_docx, ensure_condensed
 from src.pipeline import ROLES, StaffingModel
 
-MODEL_PATH = os.getenv("MODEL_PATH", "models/staffing_model.joblib")
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
+MODEL_PATH = Path(
+    os.getenv(
+        "MODEL_PATH",
+        str(BASE_DIR / "models" / "staffing_model.joblib")
+    )
+).expanduser().resolve()
+
 API_KEY = os.getenv("STAFFING_API_KEY", "")  # set this in production
 FB_DIR = os.getenv("FEEDBACK_DIR", "/tmp/feedback" if os.getenv("VERCEL") else "data/feedback")
 try:
@@ -38,16 +48,30 @@ model = None
 @app.on_event("startup")
 async def load_model():
     global model
+
+    logger.info("Loading model from %s", MODEL_PATH)
+
+    if not MODEL_PATH.is_file():
+        raise FileNotFoundError(
+            f"Model file missing: {MODEL_PATH}"
+        )
+
     try:
-        model_path = os.getenv("MODEL_PATH", "models/staffing_model.joblib")
-        logger.info(f"Loading model from {model_path}")
-        model = StaffingModel.load(model_path)
-        # Warm up prediction to load embedder
-        model.predict("Objective: warm up. Scope: a; b. Integrations: none. Data: no migration. Non-functional needs: none. Rollout: none.")
-        logger.info("Model loaded successfully")
-    except Exception as e:
-        logger.exception("Failed to load model")
-        raise RuntimeError(f"Model loading failed: {e}")
+        model = StaffingModel.load(str(MODEL_PATH))
+
+        logger.info("Joblib model loaded")
+
+        model.predict(
+            "Objective: warm up. Scope: a; b. "
+            "Integrations: none. Data: no migration. "
+            "Non-functional needs: none. Rollout: none."
+        )
+
+        logger.info("Model warm-up successful")
+
+    except Exception:
+        logger.exception("Model loading or warm-up failed")
+        raise
 
 _cache = {}
 
