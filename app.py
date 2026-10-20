@@ -1,16 +1,18 @@
-"""FastAPI service.  Run:  uvicorn app:app --host 0.0.0.0 --port 8000 --workers 2
+"""FastAPI service.  Run:  uvicorn app:app --host 0.0.0.0 --port 8000
 
 Power Automate -> HTTP action -> POST /estimate/base64
 """
 import os
-os.environ.setdefault("HF_HUB_OFFLINE", "1")  # model is cached after training: no internet calls / retries / warnings
+os.environ.setdefault("HF_HUB_OFFLINE", "1")  # model is cached: no internet calls / retries / warnings
 
 import base64
 import io
 import json
-import os
+import logging
 import time
+import traceback
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -18,15 +20,12 @@ from pydantic import BaseModel
 from src.brd_reader import condense_docx, ensure_condensed
 from src.pipeline import ROLES, StaffingModel
 
-from pathlib import Path
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
-
 MODEL_PATH = Path(
-    os.getenv(
-        "MODEL_PATH",
-        str(BASE_DIR / "models" / "staffing_model.joblib")
-    )
+    os.getenv("MODEL_PATH", str(BASE_DIR / "models" / "staffing_model.joblib"))
 ).expanduser().resolve()
 
 API_KEY = os.getenv("STAFFING_API_KEY", "")  # set this in production
@@ -37,41 +36,25 @@ except OSError:
     FB_DIR = "/tmp/feedback"
     os.makedirs(FB_DIR, exist_ok=True)
 
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 app = FastAPI(title="CRM GENIE Staffing Recommendations")
-model = None
 
-@app.on_event("startup")
-async def load_model():
-    global model
-
+# Load the model at import time, but never crash: the error is shown on /health instead.
+model, LOAD_ERROR = None, None
+try:
     logger.info("Loading model from %s", MODEL_PATH)
-
     if not MODEL_PATH.is_file():
-        raise FileNotFoundError(
-            f"Model file missing: {MODEL_PATH}"
-        )
-
-    try:
-        model = StaffingModel.load(str(MODEL_PATH))
-
-        logger.info("Joblib model loaded")
-
-        model.predict(
-            "Objective: warm up. Scope: a; b. "
-            "Integrations: none. Data: no migration. "
-            "Non-functional needs: none. Rollout: none."
-        )
-
-        logger.info("Model warm-up successful")
-
-    except Exception:
-        logger.exception("Model loading or warm-up failed")
-        raise
+        raise FileNotFoundError(f"Model file missing: {MODEL_PATH}")
+    model = StaffingModel.load(str(MODEL_PATH))
+    model.predict(
+        "Objective: warm up. Scope: a; b. "
+        "Integrations: none. Data: no migration. "
+        "Non-functional needs: none. Rollout: none."
+    )
+    logger.info("Model ready")
+except Exception:
+    model = None
+    LOAD_ERROR = traceback.format_exc()
+    logger.error(LOAD_ERROR)
 
 _cache = {}
 
@@ -82,11 +65,16 @@ def _auth(key):
 
 
 def _log(path, row):
-    with open(os.path.join(FB_DIR, path), "a", encoding="utf-8") as f:
-        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    try:
+        with open(os.path.join(FB_DIR, path), "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError:
+        logger.warning("could not write %s", path)
 
 
 def _estimate(condensed):
+    if model is None:
+        raise HTTPException(503, "model failed to load, see /health")
     if condensed not in _cache:
         if len(_cache) > 500:
             _cache.clear()
@@ -126,6 +114,8 @@ class FeedbackIn(BaseModel):
 
 @app.get("/health")
 def health():
+    if model is None:
+        return {"status": "error", "error": LOAD_ERROR}
     return {"status": "ok", "trained_on": model.n_train}
 
 

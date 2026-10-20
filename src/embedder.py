@@ -1,8 +1,18 @@
-
 import os
+import shutil
 import numpy as np
 
 BGE_NAME = "BAAI/bge-small-en-v1.5"
+
+
+def _cache_dir():
+    src = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "bge_cache"))
+    if not os.getenv("VERCEL"):
+        return src
+    dst = "/tmp/bge_cache"  # Vercel's disk is read-only except /tmp
+    if not os.path.isdir(dst):
+        shutil.copytree(src, dst)
+    return dst
 
 
 class BgeEmbedder:
@@ -20,7 +30,8 @@ class BgeEmbedder:
             from fastembed import TextEmbedding
 
             self._model = TextEmbedding(
-                model_name=self.name
+                model_name=self.name,
+                cache_dir=_cache_dir()
             )
         return self._model
 
