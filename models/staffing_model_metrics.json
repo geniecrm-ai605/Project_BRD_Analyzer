@@ -1,9 +1,9 @@
 {
   "n_train": 2076,
-  "duration_band": 0.28546771105318963,
+  "duration_band": 0.28501150684536763,
   "metrics": {
     "weeks": {
-      "cv_mae": 2.552,
+      "cv_mae": 2.555,
       "baseline_mae": 7.644,
       "model": "rf"
     },
@@ -13,7 +13,7 @@
       "model": "rf"
     },
     "qa": {
-      "cv_mae": 0.423,
+      "cv_mae": 0.421,
       "baseline_mae": 1.382,
       "model": "blend"
     },
