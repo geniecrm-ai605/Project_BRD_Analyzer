@@ -1,5 +1,11 @@
 .venv/
 __pycache__/
 *.pyc
-data/feedback/
 .env
+data/
+models/
+test_brds/
+*.joblib
+*.onnx
+*.bin
+*.safetensors
