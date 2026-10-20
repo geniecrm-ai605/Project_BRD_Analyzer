@@ -1,13 +1,9 @@
-# core
-numpy
-pandas
-scikit-learn
-joblib
-python-docx
-# API
 fastapi
-uvicorn[standard]
 python-multipart
-httpx          # only for tests
-# embeddings (CPU torch first: pip install torch --index-url https://download.pytorch.org/whl/cpu)
-sentence-transformers
+python-docx
+fastembed
+scikit-learn==1.6.0
+numpy==1.26.4
+scipy==1.14.1
+pandas==2.2.0
+joblib==1.3.2
