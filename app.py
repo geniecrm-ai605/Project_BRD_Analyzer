@@ -3,7 +3,7 @@
 Power Automate -> HTTP action -> POST /estimate/base64
 """
 import os
-os.environ.setdefault("HF_HUB_OFFLINE", "1")  # model is cached after training: no internet calls / retries / warnings
+# os.environ.setdefault("HF_HUB_OFFLINE", "1")  # model is cached after training: no internet calls / retries / warnings
 
 import base64
 import io
