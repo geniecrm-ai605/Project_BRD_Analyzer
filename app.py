@@ -27,10 +27,28 @@ except OSError:
     FB_DIR = "/tmp/feedback"
     os.makedirs(FB_DIR, exist_ok=True)
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="CRM GENIE Staffing Recommendations")
-model = StaffingModel.load(MODEL_PATH)
-model.predict("Objective: warm up. Scope: a; b. Integrations: none. Data: no migration. "
-              "Non-functional needs: none. Rollout: none.")  # loads embedder once at startup
+model = None
+
+@app.on_event("startup")
+async def load_model():
+    global model
+    try:
+        model_path = os.getenv("MODEL_PATH", "models/staffing_model.joblib")
+        logger.info(f"Loading model from {model_path}")
+        model = StaffingModel.load(model_path)
+        # Warm up prediction to load embedder
+        model.predict("Objective: warm up. Scope: a; b. Integrations: none. Data: no migration. Non-functional needs: none. Rollout: none.")
+        logger.info("Model loaded successfully")
+    except Exception as e:
+        logger.exception("Failed to load model")
+        raise RuntimeError(f"Model loading failed: {e}")
+
 _cache = {}
 
 
